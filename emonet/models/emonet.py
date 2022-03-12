@@ -18,6 +18,7 @@ def conv3x3(in_planes, out_planes, strd=1, padding=1, bias=False):
                      stride=strd, padding=padding, bias=bias)
 
 
+# same map size, but changes filter number
 class ConvBlock(nn.Module):
     def __init__(self, in_planes, out_planes):
         super(ConvBlock, self).__init__()
@@ -59,7 +60,6 @@ class ConvBlock(nn.Module):
             residual = self.downsample(residual)
 
         out3 += residual
-
         return out3
 
 class HourGlass(nn.Module):
@@ -84,6 +84,7 @@ class HourGlass(nn.Module):
         self.add_module('b3_' + str(level), ConvBlock(256, 256))
 
     def _forward(self, level, inp):
+        # import pdb;pdb.set_trace()
         up1 = inp
         up1 = self._modules['b1_' + str(level)](up1)
 
@@ -163,7 +164,8 @@ class EmoNet(nn.Module):
         self.emo_fc_2 = nn.Sequential(nn.Linear(256, 128), nn.BatchNorm1d(128), nn.ReLU(inplace=True), nn.Linear(128, self.n_expression + n_reg))
 
     def forward(self, x, reset_smoothing=False):
-        
+        # import pdb;pdb.set_trace()
+        x = x.cuda()
         #Resets the temporal smoothing
         if self.init_smoothing:
             self.init_smoothing = False
@@ -171,6 +173,7 @@ class EmoNet(nn.Module):
         if reset_smoothing:
             self.temporal_state = self.temporal_state.zeros_() 
 
+        # import pdb;pdb.set_trace()  
         x = F.relu(self.bn1(self.conv1(x)), True)
         x = F.max_pool2d(self.conv2(x), 2, stride=2)
         x = self.conv3(x)
@@ -178,8 +181,9 @@ class EmoNet(nn.Module):
 
         previous = x
         hg_features = []
-
         for i in range(self.num_modules):
+
+            # import pdb;pdb.set_trace()
             hg = self._modules['m' + str(i)](previous)
 
             ll = hg
