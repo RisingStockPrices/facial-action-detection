@@ -163,7 +163,7 @@ class EmoNet(nn.Module):
         self.avg_pool_2 = nn.AvgPool2d(4)
         self.emo_fc_2 = nn.Sequential(nn.Linear(256, 128), nn.BatchNorm1d(128), nn.ReLU(inplace=True), nn.Linear(128, self.n_expression + n_reg))
 
-    def forward(self, x, reset_smoothing=False):
+    def forward(self, x, reset_smoothing=False,return_feat=False):
         # import pdb;pdb.set_trace()
         x = x.cuda()
         #Resets the temporal smoothing
@@ -210,11 +210,14 @@ class EmoNet(nn.Module):
         else:
             emo_feat = torch.cat([x, hg_features_cat, tmp_out], dim=1)
         
+        import pdb;pdb.set_trace()
         emo_feat_conv1D = self.conv1x1_input_emo_2(emo_feat)
         final_features = self.emo_net_2(emo_feat_conv1D)
         final_features = self.avg_pool_2(final_features)
         batch_size = final_features.shape[0]
         final_features = final_features.view(batch_size, final_features.shape[1])
+        if return_feat:
+            return final_features
         final_features = self.emo_fc_2(final_features)
         
         if self.temporal_smoothing:

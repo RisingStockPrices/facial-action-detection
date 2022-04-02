@@ -45,13 +45,17 @@ from torchvision import transforms
 import PIL
 import os
 
-def tensor_to_image(tensor,out_dir='./test/results'):
+def tensor_to_image(tensor,out_dir='./test/results',prefix=None):
     if len(tensor.shape)==4:
         raise NotImplemented
     else:
+        if prefix is not None:
+            prefix = prefix+'_test'
+        else:
+            prefix = 'test'
         # choose filename
-        idx = len([f for f in os.listdir(out_dir) if f.startswith('test')])
-        fname = 'test_%d.png'%idx
+        idx = len([f for f in os.listdir(out_dir) if f.startswith(prefix)])
+        fname = '%s_%d.png'%(prefix,idx)
         pth = os.path.join(out_dir,fname)
 
         if isinstance(tensor,np.ndarray):
@@ -68,12 +72,17 @@ def get_aroval(pth_or_image,exp=True,val=True,aro=True):
     if isinstance(pth_or_image,str):
         image = cv2.imread(pth_or_image)
 
+
+    image = pth_or_image
     transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize((256,256)),
         ])
 
-    image = transform(pth_or_image)
+    try:
+        image = transform(image)
+    except:
+        return None,None,None
     # tensor_to_image(image)
     image = torch.unsqueeze(image,dim=0)
 

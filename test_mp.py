@@ -40,7 +40,7 @@ def pad_images_to_same_size(img,size):
 
     return img_padded
 
-def valaro_plot(val_lst,aro_lst,saveimg=True,num_records=5):
+def valaro_plot(val_lst,aro_lst,saveimg=False,num_records=5):
   
     # leave only last k points
     
@@ -97,110 +97,112 @@ def valaro_plot(val_lst,aro_lst,saveimg=True,num_records=5):
 # net.load_state_dict(state_dict, strict=False)
 # net.eval()
 
+def extract_face(image,bbox):
+
+  # (h,w,c) PIL image
+  height,width,_ = image.shape
+
+  xmin = int(bbox.xmin * width)
+  ymin = int(bbox.ymin * height)
+  bbox_w = int(bbox.width*width)
+  bbox_h = int(bbox.height*height)
+  #     "xmax" : int(bbox.width * width + bbox.xmin * width),
+  #     "ymax" : int(bbox.height * height + bbox.ymin * height)
+  # }
+
+  # if bbox_w ==0 or bbox_h ==0 or xmin+bbox_w>width:
+    # import pdb;pdb.set_trace()
+  # model.tensor_to_image(image)
+  img = image[max(0,ymin):min(height,ymin+bbox_h),max(0,xmin):min(width,xmin+bbox_w),:]
+  # model.tensor_to_image(img)
 
 
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_face_mesh = mp.solutions.face_mesh
+  return img
+  # detection_results.append(bbox_points)
 
-# For webcam input:
-drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+if __name__=="__main__":
 
-vid_pth = '/home/spock-the-wizard/cmu/sg/emonet/test/data/100teens.mp4'
-cap = cv2.VideoCapture(vid_pth)
-plot_size = 400
-frame_width = int(cap.get(3)+plot_size)
-frame_height = int(cap.get(4))
+  mp_drawing = mp.solutions.drawing_utils
+  mp_drawing_styles = mp.solutions.drawing_styles
+  mp_face_detection = mp.solutions.face_detection #mesh = mp.solutions.face_mesh
 
-vidname = vid_pth.split('/')[-1].split('.')[0]
-outdir = '/home/spock-the-wizard/cmu/sg/emonet/test/results'
-outpth = os.path.join(outdir,'out_%s.avi'%vidname)
-out = cv2.VideoWriter(outpth,cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
-# outpth_plot = outpth.replace('out','out_plot')
-# out_plot = cv2.VideoWriter(outpth_plot,cv2.VideoWriter_fourcc('M','J','P','G'), 10, (400,400))
+  # For webcam input:
+  drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 
-# import pdb;pdb.set_trace()
-cnt = 0
-max_frames = 1000
-val_lst = []
-aro_lst = []
-with mp_face_mesh.FaceMesh(
-    max_num_faces=1,
-    refine_landmarks=True,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as face_mesh:
-  while cap.isOpened():
-    cnt += 1
-    if cnt > max_frames:
-      break
-    success, image = cap.read()
-    if not success:
-      # print("Ignoring empty camera frame.")
-      # If loading a video, use 'break' instead of 'continue'.
-      break
+  vid_pth = '/home/spock-the-wizard/cmu/sg/emonet/test/data/wink_test.mp4'
+  cap = cv2.VideoCapture(vid_pth)
+  plot_size = 400
+  frame_width = int(cap.get(3)+plot_size)
+  frame_height = int(cap.get(4))
 
-    results = face_mesh.process(image)
+  vidname = vid_pth.split('/')[-1].split('.')[0]
+  outdir = '/home/spock-the-wizard/cmu/sg/emonet/test/results'
+  outpth = os.path.join(outdir,'out_%s.avi'%vidname)
+  out = cv2.VideoWriter(outpth,cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
+  # outpth_plot = outpth.replace('out','out_plot')
+  # out_plot = cv2.VideoWriter(outpth_plot,cv2.VideoWriter_fourcc('M','J','P','G'), 10, (400,400))
 
-    # Draw the face mesh annotations on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    if results.multi_face_landmarks:
-      for face_landmarks in results.multi_face_landmarks:
-        import pdb;pdb.set_trace()
-
-        mp_drawing.draw_landmarks(
-            image=image,
-            landmark_list=face_landmarks,
-            connections=mp_face_mesh.FACEMESH_TESSELATION,
-            landmark_drawing_spec=None,
-            connection_drawing_spec=mp_drawing_styles
-            .get_default_face_mesh_tesselation_style())
-
-        # get bounding box (only face part)
-        # 
-        # put that in the network
-        # 
-        # create plots
-        # 
-              
-        # inference here
-        exp,val,aro = model.get_aroval(image)
-
-        exp = torch.argmax(exp).item()
-        val = val.item()
-        aro = aro.item()
-
-        val_lst.append(val)
-        aro_lst.append(aro)
-
-
-        plt_size = min(plot_size,frame_height)
-        black = np.zeros((frame_height,plt_size,3))
-        img_plot = valaro_plot(val_lst,aro_lst)
-        img_plot = pad_images_to_same_size(img_plot,(frame_height,plt_size))
-
-        cv2.putText(image,'exp:%s'%(expression_labels[exp]),(10,50),cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,1,(255,255,255))
-        cv2.putText(image,'val:%4f aro:%4f'%(val,aro),(10,100),cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,0.7,(255,255,255))
-
-
-
-
-        # To improve performance, optionally mark the image as not writeable to
-        # pass by reference.
-
-        image = cv2.hconcat([image,img_plot])
-        image.flags.writeable = False
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # model.tensor_to_image(image) #cv2.imwrite('./test/results/extended.png')
-        # import pdb;pdb.set_trace()
-        # get top single face
+  # import pdb;pdb.set_trace()
+  cnt = 0
+  max_frames = 1000
+  val_lst = []
+  aro_lst = []
+  with mp_face_detection.FaceDetection(model_selection=1,min_detection_confidence=0.5) as face_detection:
+    while cap.isOpened():
+      cnt += 1
+      if cnt > max_frames:
+        break
+      success, image = cap.read()
+      if not success:
+        # print("Ignoring empty camera frame.")
+        # If loading a video, use 'break' instead of 'continue'.
         break
 
+      results = face_detection.process(image)
 
-        out.write(image)
-        
+      # Draw the face mesh annotations on the image.
+      image.flags.writeable = True
+      image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+      image_org = image.copy()
+      
+      if results.detections:
+        for detection in results.detections:
+          mp_drawing.draw_detection(image,detection)
+          # import pdb;pdb.set_trace()
 
-cap.release()
-out.release()
-# out_plot.release()
+          face = extract_face(image_org,detection.location_data.relative_bounding_box)
+
+          # model.tensor_to_image(face,prefix='face')
+          # import pdb;pdb.set_trace()
+
+          exp,val,aro = model.get_aroval(face)
+
+          if exp is None:
+            val_lst.append(val_lst[-1])
+            aro_lst.append(aro_lst[-1])
+            face = np.zeros((400,400,3),dtype=np.uint8)
+            # import pdb;pdb.set_trace()
+          else:
+            exp = torch.argmax(exp).item()
+            val = val.item()
+            aro = aro.item()
+
+            val_lst.append(val)
+            aro_lst.append(aro)
+
+          plt_size = min(plot_size,frame_height)
+          valaro = valaro_plot(val_lst,aro_lst)
+          plots = cv2.vconcat([cv2.resize(face,(200,200)),cv2.resize(valaro,(200,200))])
+          plots = pad_images_to_same_size(plots,(frame_height,plot_size))
+
+          # model.tensor_to_image(plots)
+          image = cv2.hconcat([image,plots])
+          out.write(image)
+          # model.tensor_to_image(image) #cv2.imwrite('./test/results/extended.png')
+          # import pdb;pdb.set_trace()
+          break    
+          
+
+  cap.release()
+  out.release()
+  # out_plot.release()
