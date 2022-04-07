@@ -16,13 +16,9 @@ from emonet.evaluation import evaluate, evaluate_flip
 
 torch.backends.cudnn.benchmark =  True
 
-#Parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('--nclasses', type=int, default=8, choices=[5,8], help='Number of emotional classes to test the model on. Please use 5 or 8.')
-args = parser.parse_args()
 
 # Parameters of the experiments
-n_expression = args.nclasses
+n_expression = 8#args.nclasses
 batch_size = 32
 n_workers = 16
 device = 'cuda:0'
@@ -67,7 +63,7 @@ def tensor_to_image(tensor,out_dir='./test/results',prefix=None):
             
             cv2.imwrite(pth,image)
 
-def get_aroval(pth_or_image,exp=True,val=True,aro=True):
+def get_aroval(pth_or_image,exp=True,val=True,aro=True,return_feat=False):
     
     if isinstance(pth_or_image,str):
         image = cv2.imread(pth_or_image)
@@ -88,8 +84,10 @@ def get_aroval(pth_or_image,exp=True,val=True,aro=True):
 
     with torch.no_grad():
         # import pdb;pdb.set_trace()
-        out = net(image)
+        out = net(image,return_feat=return_feat)
         
+        if return_feat:
+            return out
         heatmap = out['heatmap']
         exp = out['expression']
         val = out['valence']
@@ -99,8 +97,21 @@ def get_aroval(pth_or_image,exp=True,val=True,aro=True):
 
     return exp,val,aro
 
+#Parse arguments
+# parser = argparse.ArgumentParser()
+# add_argument(parser)
+# try:
+#     args = parser.parse_args()
+# except Error as e:
+#     import pdb;pdb.set_trace()
 if __name__=="__main__":
 
+
+    #Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--nclasses', type=int, default=8, choices=[5,8], help='Number of emotional classes to test the model on. Please use 5 or 8.')
+    args = parser.parse_args()
+    
     with torch.no_grad():
         image_file = '/home/spock-the-wizard/cmu/sg/visa_photo.jpg'
 

@@ -2,3 +2,9 @@ __pycache__/
 *.mp4
 *.avi
 *.png
+*.csv
+data/
+.ipynb_checkpoints/
+.vscode/
+deprecated/
+test/results
