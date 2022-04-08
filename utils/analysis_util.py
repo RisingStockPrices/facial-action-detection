@@ -46,18 +46,33 @@ def sort_au(aus):
     print(sorted_aus)
 
 
-def sort_by_similarity(aus, target, loss='L2',top=5):
+def sort_by_similarity(aus, target, loss='L2',top=None,threshold=None):
     # df to np array
     aus = aus.to_numpy()[:-1]
     target = aus[target]
-
+    
     if loss=='L2':
         sim_scores = np.linalg.norm(aus-target,axis=1) #mean_squared_error(target,scores,multioutput='rawvalues')
         idx_sorted = np.argsort(sim_scores)
     else:
         raise NotImplemented
 
+    if top is not None:
+        mode='top'
+    elif threshold is not None:
+        mode='threshold'
+
     # sort by similarity score
     frames_sorted = [(idx,sim_scores[idx]) for idx in idx_sorted]
 
-    return frames_sorted[:top]
+    # return according to mode (topk or threshold)
+    if mode is 'top':
+        return frames_sorted[:top]
+    else:
+        for idx,(_,score) in enumerate(frames_sorted):
+            if score > threshold:
+                break
+        res = frames_sorted[:idx]
+        return res
+        res = (np.array([i for _,i in frames_sorted])>threshold) * frames_sorted
+        return res
