@@ -4,10 +4,6 @@ import os
 import pandas as pd
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--video',default='./data/faces/face1.mp4',type=str,help='path of video to extract frames')
-
-args = parser.parse_args()
 
 ROOT_DIR = './data/'
 FRAME_DIR = os.path.join(ROOT_DIR,'frames')
@@ -56,4 +52,10 @@ def extract_aus_from_video(pth,save_aus=True):
 
 
 if __name__ == "__main__":
+
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--video',default='./data/faces/face1.mp4',type=str,help='path of video to extract frames')
+
+    args = parser.parse_args()
     extract_aus_from_video(args.video)

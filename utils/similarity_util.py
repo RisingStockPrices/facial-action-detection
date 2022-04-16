@@ -1,5 +1,9 @@
 import numpy as np
 
+"""
+Iteratively searches through SEQ to compute alignment score with TARGET
+returns detected subsequences satisfying certain criteria (either TOP / THRESHOLD mode)
+"""
 def find_matches(seq,target_seq,mode='sliding-window',loss='l2',top=None,threshold=None):
     # sliding window
     target_len = target_seq.shape[0]
@@ -17,10 +21,12 @@ def find_matches(seq,target_seq,mode='sliding-window',loss='l2',top=None,thresho
     if top != None:
         return windows_sorted[:top]
     elif threshold != None:
+        i = None
         for idx,(_,_,score) in enumerate(windows_sorted):
             if score > threshold:
+                i=idx
                 break
-        return windows_sorted[:idx]
+        return windows_sorted[:i]
     else:
         raise NotImplemented
 

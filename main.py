@@ -1,60 +1,20 @@
 import os
 import pandas as pd
 import numpy as np
+import argparse
 
 from utils.util import save_subplots
 from utils.analysis_util import sort_by_similarity
-from utils.plot_util import color_matches,test_face_plotter
+from utils.plot_util import color_matches, save_detection_results,test_face_plotter
 from utils.similarity_util import find_matches, prune_matches
-from feat import Detector
 
-ROOT_DIR = './data/'
-FRAME_DIR = os.path.join(ROOT_DIR,'frames')
-SRC_DIR = os.path.join(ROOT_DIR,'faces')
-AUS_DIR = os.path.join(ROOT_DIR,'aus')
-AUSPLOT_DIR = os.path.join(ROOT_DIR,'aus_plot')
+from library import *
 
-detector = None
-
-def load_model():
-    face_model = "retinaface"
-    landmark_model = "mobilenet"
-    au_model = "rf"
-    emotion_model = "resmasknet"
-    detector = Detector(face_model = face_model, landmark_model = landmark_model, au_model = au_model, emotion_model = emotion_model)
-    return detector
-
-
-def extract_aus_from_frames(frames,name):
-    image_prediction = detector.detect_image(frames)
-    res = image_prediction.aus()
-    import pdb;pdb.set_trace()
-    pth = os.path.join(ROOT_DIR,'aus','%s.csv'%name)
-    res.to_csv(pth)
-    return res
-
-
-"""
-Extract AU scores directly from video
-Not from face frames
-"""
-def extract_aus_from_video(pth,save_aus=True):
-    name = pth.split('/')[-1].split('.')[0]
-    aus_pth = os.path.join(AUS_DIR,'%s.csv'%name)
-    # already exists, simply load
-    if os.path.exists(aus_pth):
-        res = pd.read_csv(aus_pth)
-        return res
-
-    detector = load_model()
-    video_prediction = detector.detect_video(pth)
-    res = video_prediction.aus()
-    if save_aus:
-        import pdb;pdb.set_trace()
-        res.to_csv(aus_pth,index=False)
-        res.plot().figure.savefig(aus_pth.replace('csv','png'))
-    return res
-
+parser = argparse.ArgumentParser()
+parser.add_argument('--video',type=str,help='name of video file')
+parser.add_argument('--action',type=str,help='name of facial action')
+parser.add_argument('--threshold',default=0.15,type=float,help='detection threshold')
+args = parser.parse_args()
 
 """ 
 Detect single frame action
@@ -102,27 +62,20 @@ def detect_facial_expression(source,target,threshold=None,top_k=None):
     return pruned
 
 if __name__ == "__main__":
-    
-    # frame_dir = os.path.join(FRAME_DIR,'wink_test')
-    # frames = [os.path.join(frame_dir,i) for i in os.listdir(frame_dir)] #EST_SRC_DIR) ["0.png","1.png","10.png","100.png","101.png","102.png","103.png"]
 
-    vid_pth = os.path.join(SRC_DIR,'test2.mp4')
-    target_pth = os.path.join(SRC_DIR,'wink_test.avi')
+    video_pth = os.path.join(SRC_DIR,args.video)
+    facial_action = args.action #'l_wink'
+    threshold = args.threshold
 
-    threshold = 0.15
-    aus_input_ = extract_aus_from_video(vid_pth)[:-1]
+    aus_input_ = extract_aus_from_video(video_pth)[:-1]
     aus_input = aus_input_.to_numpy()
-    aus_tar = extract_aus_from_video(target_pth)[:-1].to_numpy()
-    
-    
-    test_face_plotter(aus_input)
 
-    import pdb;pdb.set_trace()
-    target_idx = (34,44)
-    target = aus_tar[target_idx[0]:target_idx[1]]
+    # extract target from library
+    target = FAL.retrieve_aus(facial_action)
+
     res = detect_facial_expression(aus_input,target,threshold=threshold)
-    # aus,res = detect_single_frame(vid_pth,return_aus=True,threshold=threshold)
-    # aus,res = detect_multi_frames(vid_pth,target=(33,44),threshold=threshold, return_aus=True)
     
-    pth = os.path.join(AUSPLOT_DIR,'diff_source_threshold_%.2f.png'%threshold)
-    color_matches(aus_input_,res,pth=pth,title='threshold is %f'%threshold)
+    
+    save_detection_results(aus_input_,res,args.video,facial_action,threshold)
+    # pth = os.path.join(AUSPLOT_DIR,'%s_diff_source_threshold_%.2f.png'%threshold)
+    # color_matches(aus_input_,res,pth=pth,title='athreshold is %f'%threshold)
