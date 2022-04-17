@@ -8,7 +8,9 @@ from utils.analysis_util import sort_by_similarity
 from utils.plot_util import color_matches, save_detection_results,test_face_plotter
 from utils.similarity_util import find_matches, prune_matches
 
-from library import *
+# from library import *
+from eval import *
+from cpd import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--video',type=str,help='name of video file')
@@ -51,15 +53,47 @@ def detect_multi_frames(vid_pth,target=(1,5),top_k=None,threshold=None,return_au
     else:
         return pruned
 
+
 """
 Generalized version of detect multi frames
 when target action is not from video to search
 """
-def detect_facial_expression(source,target,threshold=None,top_k=None):
-    matches = find_matches(source,target,top=top_k,threshold=threshold)
-    pruned = prune_matches(matches,len(source))
-    # print(pruned)
-    return pruned
+def detect_facial_expression(src_video,action,mode='sliding-window',threshold=0.1,return_score=True):
+    # extract aus from video and action lib
+    print(threshold)
+    aus = extract_aus_from_video(src_video)[:-1] # df
+    aus_tar = FAL.retrieve_aus(action,return_df=True)
+    
+    # convert to flow frames
+    if mode == 'flow-frame':
+        aus,map_src = convert_to_flow_frames(aus)
+        aus_tar,map_tar = convert_to_flow_frames(aus_tar)
+
+    # import pdb;pdb.set_trace()
+    matches = find_matches(aus.to_numpy(),aus_tar.to_numpy(),threshold=threshold)
+    pruned = prune_matches(matches,len(aus))
+
+    # convert back to original frames
+    if mode == 'flow-frame':
+        frames_original = []
+        for x,y,score in pruned:
+            frames_original.append((map_src[x][0],map_src[y][1],score))
+        pruned = frames_original
+
+    if return_score:
+        return pruned
+    else:
+        return [(x,y) for x,y,_ in pruned]
+
+
+# def detect_facial_expression(source,target,threshold=None,top_k=None,return_score=True):
+#     matches = find_matches(source,target,top=top_k,threshold=threshold)
+#     pruned = prune_matches(matches,len(source))
+#     # print(pruned)
+#     if return_score:
+#         return pruned
+#     else:
+#         return [(x,y) for x,y,_ in pruned]
 
 if __name__ == "__main__":
 
@@ -67,15 +101,25 @@ if __name__ == "__main__":
     facial_action = args.action #'l_wink'
     threshold = args.threshold
 
-    aus_input_ = extract_aus_from_video(video_pth)[:-1]
-    aus_input = aus_input_.to_numpy()
-
-    # extract target from library
-    target = FAL.retrieve_aus(facial_action)
-
-    res = detect_facial_expression(aus_input,target,threshold=threshold)
+    # sliding-window
+    out_slid = detect_facial_expression(video_pth,facial_action,mode='sliding-window',threshold=threshold,return_score=False)
+    # flow-frame
+    out_flow = detect_facial_expression(video_pth,facial_action,mode='flow-frame',threshold=threshold,return_score=False)
     
-    
-    save_detection_results(aus_input_,res,args.video,facial_action,threshold)
+    print(out_slid)
+    print(out_flow)
+    wink_gt = ACTION_SCRIPT_FACE1['l-wink']
+    res_slid = evaluate(out_slid,wink_gt,return_score=True)#plot_fname='roc_slid.png')
+    res_flow = evaluate(out_flow,wink_gt,return_score=True)#plot_fname='roc_flow.png')
+    # import pdb;pdb.set_trace()
+    print(wink_gt)
+
+
+    print(res_slid)
+    print(res_flow)
+
+
+
+    # save_detection_results(aus_input_,res,args.video,facial_action,threshold)
     # pth = os.path.join(AUSPLOT_DIR,'%s_diff_source_threshold_%.2f.png'%threshold)
     # color_matches(aus_input_,res,pth=pth,title='athreshold is %f'%threshold)

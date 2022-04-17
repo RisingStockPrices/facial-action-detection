@@ -42,7 +42,7 @@ def compute_confidence_score(out,gt):
     return res
 
 def preprocess_roc_input(out,gt):
-
+    # import pdb;pdb.set_trace()
     scores = compute_confidence_score(out,gt)
     y_pred = scores
     y_true = [0 if score==0 else 1 for score in scores]
@@ -63,7 +63,7 @@ def evaluate(out,gt,plot_fname=None,return_score=False):
     res = roc_curve(y_true,y_pred)
     score = roc_auc_score(y_true,y_pred)
     plot = RocCurveDisplay.from_predictions(y_true,y_pred)
-    
+    # import pdb;pdb.set_trace()
     if plot_fname is not None:
         plot.figure_.savefig(plot_fname)
     if return_score:

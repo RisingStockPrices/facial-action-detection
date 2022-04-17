@@ -60,7 +60,7 @@ class FacialActionLibrary:
         return df
        
 
-    def retrieve_aus(self,nickname):
+    def retrieve_aus(self,nickname,return_df=False):
 
         if nickname==DEFAULT_NAME or not isinstance(nickname,str):
             raise TypeError
@@ -70,6 +70,8 @@ class FacialActionLibrary:
             raise KeyError
         # import pdb;pdb.set_trace()
         aus = np.load(df.iloc[0]['aus_file_path'])
+        if return_df:
+            return pd.DataFrame(aus)
         return aus
     
     def delete_entry(self,nickname):
